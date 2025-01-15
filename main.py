@@ -74,9 +74,9 @@ def simulate_ray_path(start_point, initial_direction, steps, delta_step):
 
 # Initial parameters
 start_point = np.array([0.0, 0.0, 0.0])  # Start at origin
-initial_direction = np.array([0.0, 0.0, 1.0])  # Move along +Z direction
+initial_direction = np.array([1.0, 0.0, 0.0])  # Move along +Z direction
 steps = 100  # Number of steps to simulate
-delta_step = 0.1  # Step size
+delta_step = 1  # Step size
 
 # Simulate the ray path
 ray_path = simulate_ray_path(start_point, initial_direction, steps, delta_step)
