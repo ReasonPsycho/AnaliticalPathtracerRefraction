@@ -10,51 +10,64 @@ def sampleTemperature(p):
 
     t = (p[2] - seeLevel) / diffrence;
     t = np.clip(t, 0, 1);
-    return lerp(13.0, 12.0, t) + 274.15;  # Example temperature field
+    return lerp(12.0, 1000.0, t) + 274.15;  # Example temperature field
 
-def custom_refract(I, N, eta):
+def refract(incident_vec, normal, eta):
     """
-    Calculate the refraction vector using Snell's law.
+    Computes the refracted vector based on an incident vector, surface normal, and eta (n1 / n2).
 
     Parameters:
-    - I (numpy array): Incident vector (3D, normalized)
-    - N (numpy array): Surface normal vector (3D, normalized)
-    - eta (float): Index of refraction ratio (n1 / n2)
+    - out (numpy array): Output vector to populate the refracted result.
+    - incident_vec (numpy array): Incident vector (3D).
+    - normal (numpy array): Normal vector (3D).
+    - eta (float): Ratio of refractive indices.
 
     Returns:
-    - numpy array: Refracted vector (3D) or None if total internal reflection occurs
+    - None: Updates the out array in place.
     """
-    I = I / np.linalg.norm(I)
-    N = N / np.linalg.norm(N)
-    cosThetaI = -np.dot(I, N)
-    k = 1.0 - eta**2 * (1.0 - cosThetaI**2)
+    # Ensure vectors are normalized
+    incident_vec = incident_vec / np.linalg.norm(incident_vec)
+    normal = normal / np.linalg.norm(normal)
+
+    # Dot product between normal and incident_vec
+    n_dot_i = np.dot(normal, incident_vec)
+
+    # Snell's Law calculations
+    k = 1.0 - eta ** 2 * (1.0 - n_dot_i ** 2)
     if k < 0.0:
-        return None  # Total internal reflection
-    return eta * I + (eta * cosThetaI - np.sqrt(k)) * N
+        # Total internal reflection - set out to zero vector
+        return np.array([0.0, 0.0, 0.0])
+    else:
+        # Refracted vector calculation
+        return eta * incident_vec - (eta * n_dot_i + np.sqrt(k)) * normal
+
 
 def etaFromTemperatures(t1, t2):
     """Calculate the refractive index ratio based on temperatures."""
     return 1 + 0.000292 * t1 / t2
 
-def normalFromPoints(p1, p2):
+def normalFromPoints(direction, p1, p2):
     """Calculate the normal vector at a point based on temperature gradient."""
     delta = 1  # Small step for finite difference
     # Gradient in the x direction
-    t1x = sampleTemperature(p1)
-    t2x = sampleTemperature(p2 + np.array([delta, 0, 0]))
+    t1x = etaFromTemperatures(sampleTemperature(p1),sampleTemperature(p2))
+    t2x = etaFromTemperatures(sampleTemperature(p1),sampleTemperature(p2 + np.array([delta, 0, 0])))
     gradient_x = (t2x - t1x) / delta
 
     # Gradient in the y direction
-    t1y = sampleTemperature(p1)
-    t2y = sampleTemperature(p2 + np.array([0, delta, 0]))
+    t1y = etaFromTemperatures(sampleTemperature(p1),sampleTemperature(p2))
+    t2y = etaFromTemperatures(sampleTemperature(p1),sampleTemperature(p2 + np.array([0, delta, 0])))
     gradient_y = (t2y - t1y) / delta
 
-    t1z = sampleTemperature(p1)
-    t2z = sampleTemperature(p2 + np.array([0, 0, delta]))
+    t1z =  etaFromTemperatures(sampleTemperature(p1),sampleTemperature(p2))
+    t2z = etaFromTemperatures(sampleTemperature(p1),sampleTemperature(p2 + np.array([0, 0, delta])))
     gradient_z = (t2z - t1z) / delta
-    gradient = np.array([gradient_x,gradient_y, gradient_z])
-    if(gradient_z == 0.0):
-        return [0.0,0.0,0.0]
+
+    if (gradient_z == 0.0):
+        return [direction[0], direction[1], direction[2]]
+
+    gradient = np.array([-direction[0] + gradient_x,-direction[1] + gradient_y,-direction[2] + gradient_z])
+
     return gradient / np.linalg.norm(gradient)
 
 def simulate_ray_path(start_point, initial_direction, steps, delta_step):
@@ -76,11 +89,11 @@ def simulate_ray_path(start_point, initial_direction, steps, delta_step):
 
     for _ in range(steps):
         next_point = current_point + direction * delta_step
-        normal = normalFromPoints(current_point, next_point)
+        normal = normalFromPoints(direction,current_point, next_point)
         t1 = sampleTemperature(current_point)
         t2 = sampleTemperature(next_point)
         eta = etaFromTemperatures(t1, t2)
-        refracted_dir = custom_refract(direction,-direction + normal, eta)
+        refracted_dir = refract(direction, normal, eta)
 
         if refracted_dir is None:
             path.append([next_point[0], next_point[2]])
@@ -93,16 +106,16 @@ def simulate_ray_path(start_point, initial_direction, steps, delta_step):
     return np.array(path)
 
 # Initial parameters
-start_point = np.array([0.0, 0.0, 0.0])  # Start at origin
-initial_direction = np.array([1.0, 0.0, 0.0005])  # Move along +Z direction
-delta_step = 0.5  # Step size
+start_point = np.array([0.002, 0.0, 0.0])  # Start at origin
+initial_direction = np.array([1.0, 0.0, 0.0030])  # Move along +Z direction
+delta_step = 0.0001 # Step size
 
 steps = int(6 / delta_step)  # Number of steps to simulate
 
 # Simulate the ray path
 ray_paths = []
 for i in range(10):
-    initial_direction[2] = initial_direction[2] - 0.0001
+    initial_direction[2] = initial_direction[2] - 0.001
     ray_paths.append(simulate_ray_path(start_point, initial_direction, steps, delta_step))
 
 # Plot the ray path
