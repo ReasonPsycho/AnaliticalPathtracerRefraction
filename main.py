@@ -1,9 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+def lerp(a, b, t):
+    return a + (b - a) * t
+
 def sampleTemperature(p):
-    """Sample temperature at a given point (mock function)."""
-    return 300 + 10 * p[0]  # Example temperature field
+    seeLevel = 0
+    diffrence = 0.002
+
+    t = (p[2] - seeLevel) / diffrence;
+    t = np.clip(t, 0, 1);
+    return lerp(13.0, 12.0, t) + 274.15;  # Example temperature field
 
 def custom_refract(I, N, eta):
     """
@@ -31,11 +38,23 @@ def etaFromTemperatures(t1, t2):
 
 def normalFromPoints(p1, p2):
     """Calculate the normal vector at a point based on temperature gradient."""
-    delta = 0.01  # Small step for finite difference
-    t1 = sampleTemperature(p1)
-    t2 = sampleTemperature(p2 + np.array([0, 0, delta]))
-    gradient_z = (t2 - t1) / delta
-    gradient = np.array([0, 0, gradient_z])
+    delta = 1  # Small step for finite difference
+    # Gradient in the x direction
+    t1x = sampleTemperature(p1)
+    t2x = sampleTemperature(p2 + np.array([delta, 0, 0]))
+    gradient_x = (t2x - t1x) / delta
+
+    # Gradient in the y direction
+    t1y = sampleTemperature(p1)
+    t2y = sampleTemperature(p2 + np.array([0, delta, 0]))
+    gradient_y = (t2y - t1y) / delta
+
+    t1z = sampleTemperature(p1)
+    t2z = sampleTemperature(p2 + np.array([0, 0, delta]))
+    gradient_z = (t2z - t1z) / delta
+    gradient = np.array([gradient_x,gradient_y, gradient_z])
+    if(gradient_z == 0.0):
+        return [0.0,0.0,0.0]
     return gradient / np.linalg.norm(gradient)
 
 def simulate_ray_path(start_point, initial_direction, steps, delta_step):
@@ -51,7 +70,7 @@ def simulate_ray_path(start_point, initial_direction, steps, delta_step):
     Returns:
     - numpy array: Array of ray positions
     """
-    path = [start_point]
+    path = [[start_point[0],start_point[2]]]
     direction = initial_direction / np.linalg.norm(initial_direction)
     current_point = start_point
 
@@ -61,33 +80,38 @@ def simulate_ray_path(start_point, initial_direction, steps, delta_step):
         t1 = sampleTemperature(current_point)
         t2 = sampleTemperature(next_point)
         eta = etaFromTemperatures(t1, t2)
-        refracted_dir = custom_refract(direction, normal, eta)
+        refracted_dir = custom_refract(direction,-direction + normal, eta)
 
         if refracted_dir is None:
-            break  # Stop simulation if total internal reflection occurs
+            path.append([next_point[0], next_point[2]])
+            # just continue
 
         direction = refracted_dir / np.linalg.norm(refracted_dir)
-        path.append(next_point)
+        path.append([next_point[0],next_point[2]])
         current_point = next_point
 
     return np.array(path)
 
 # Initial parameters
 start_point = np.array([0.0, 0.0, 0.0])  # Start at origin
-initial_direction = np.array([1.0, 0.0, 0.0])  # Move along +Z direction
-steps = 100  # Number of steps to simulate
-delta_step = 1  # Step size
+initial_direction = np.array([1.0, 0.0, 0.0005])  # Move along +Z direction
+delta_step = 0.5  # Step size
+
+steps = int(6 / delta_step)  # Number of steps to simulate
 
 # Simulate the ray path
-ray_path = simulate_ray_path(start_point, initial_direction, steps, delta_step)
+ray_paths = []
+for i in range(10):
+    initial_direction[2] = initial_direction[2] - 0.0001
+    ray_paths.append(simulate_ray_path(start_point, initial_direction, steps, delta_step))
 
 # Plot the ray path
 fig = plt.figure(figsize=(8, 6))
-ax = fig.add_subplot(111, projection='3d')
-ax.plot(ray_path[:, 0], ray_path[:, 1], ray_path[:, 2], label='Ray Path', marker='o')
+ax = fig.add_subplot(111)
+for i in range(10):
+    ax.plot(ray_paths[i][:, 0], ray_paths[i][:, 1], label='Ray Path', marker='o')
 ax.set_xlabel('X')
-ax.set_ylabel('Y')
-ax.set_zlabel('Z')
+ax.set_ylabel('Z')
 ax.set_title('Simulated Ray Path')
 ax.legend()
 plt.show()
