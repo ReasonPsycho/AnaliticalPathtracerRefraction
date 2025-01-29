@@ -58,7 +58,7 @@ def cnoise(x, y, z):
                      lerp(u, grad(p[AB + 1], x, y - 1, z - 1),
                           grad(p[BB + 1], x - 1, y - 1, z - 1))))
 
-def sampleTemperature(p, texture_1d, precision=0.00001, min_temperature_f=-100.0, max_temperature_f=100.0):
+def sampleTemperature(p, texture_1d, precision=0.0001, min_temperature_f=-100.0, max_temperature_f=100.0):
     """
     Sample temperature based on 1D texture, including normalization logic.
 
@@ -73,23 +73,63 @@ def sampleTemperature(p, texture_1d, precision=0.00001, min_temperature_f=-100.0
     - float: Sampled temperature in degrees Fahrenheit.
     """
     # Constants
-    texture_width = len(texture_1d)  # Number of pixels in the 1D texture
-    max_height_km = texture_width * precision  # Total altitude range covered by the texture
+    texture_width = len(texture_1d) // 100  # Number of pixels per row in the wrapped 2D texture (10 pixels per row)
+    max_height_km = texture_width * 100 * precision  # Total altitude range covered by the 2D texture
 
     # Map z-coordinate (height in meters) to texture index
     z_km = p[2]  # z (meters) converted to kilometers
-    texture_index = z_km / max_height_km * texture_width
+    texture_index = z_km / max_height_km * (texture_width * 100)  # Adjust for wrapping logic
 
-    # Clamp the texture index into valid bounds
-    texture_index = int(np.clip(texture_index, 0, texture_width - 1))
+    # Handle row and column wrapping logic (wrapped 2D texture)
+    row = int(texture_index // 100) % 100
+    col = int(texture_index % 100)
 
-    # Retrieve the red value from the texture
-    red_value = texture_1d[texture_index]  # Red component (0–255)
+    # Retrieve the red value based on wrapping logic
+    red_value = texture_1d[row * 100 + col]  # Red component (0–255)
 
     # Reverse normalization: Convert red_value (0–255) back to temperature (in Fahrenheit)
     temperature_f = min_temperature_f + (red_value / 255.0) * (max_temperature_f - min_temperature_f)
 
     return temperature_f # + cnoise(p[0], p[1], p[2]) * 0.1
+
+def get_temperature_from_texture(texture, altitude_km, max_altitude_km, precision, min_temperature_f,
+                                 max_temperature_f):
+    """
+    Get the temperature at a specific altitude from a generated 1D temperature texture.
+
+    Parameters:
+    - texture (PIL.Image.Image): The generated texture.
+    - altitude_km (float): The altitude in kilometers for which to get the temperature.
+    - max_altitude_km (float): The maximum altitude covered by the texture (in km).
+    - precision (float): The altitude range per pixel in kilometers.
+    - min_temperature_f (float): The minimum temperature value mapped to 0 in the texture.
+    - max_temperature_f (float): The maximum temperature value mapped to 255 in the texture.
+
+    Returns:
+    - temperature (float): The temperature at the given altitude (in Fahrenheit).
+    """
+    # Convert the texture into a NumPy array
+    texture_np = np.array(texture)
+
+    # Calculate the total number of pixels in the 1D data
+    texture_width = texture_np.shape[1]
+    texture_height = texture_np.shape[0]
+    total_pixels = texture_width * (texture_height // 100)
+
+    # Calculate the corresponding pixel index for the given altitude
+    pixel_index = min(int(altitude_km / precision), total_pixels - 1)
+
+    # Determine the row and column in the texture where the pixel would be
+    row = pixel_index // texture_width
+    col = pixel_index % texture_width
+
+    # Get the red channel value at the calculated position (which holds the temperature encoding)
+    red_value = texture_np[row * 100, col, 0]
+
+    # Map the normalized value back to the temperature range
+    temperature = (red_value / 255) * (max_temperature_f - min_temperature_f) + min_temperature_f
+
+    return temperature
 
 def refract(incident_vec, normal, eta):
     """
@@ -171,24 +211,27 @@ def simulate_ray_path(start_point, initial_direction, delta_step,maxX,texture_1d
         t2 = sampleTemperature(next_point,texture_1d)
         currentDifference = math.fabs(t2 - t1) + lastDiffrence
 
-        if (currentDifference > 0.001):
-            next_point = current_point + direction * 0.001
-        else:
-            lastDiffrence = currentDifference
-            path.append([next_point[0], next_point[2]])
-            current_point = next_point
 
-        while (currentDifference > 0.001):
-            t1 = sampleTemperature(current_point,texture_1d)
-            t2 = sampleTemperature(next_point,texture_1d)
-            currentDifference = math.fabs(t2 - t1)
-            eta = etaFromTemperatures(t1, t2)
-            normal = normalFromPoints(direction, current_point, next_point,texture_1d)
-            direction = refract(direction, normal, eta)
+        if (currentDifference > 0.5):
+            amount_of_segments = int(currentDifference // 0.8 + 1)
+            next_point = current_point + direction * delta_step / amount_of_segments
+            t1 = sampleTemperature(current_point, texture_1d)
+            t2 = sampleTemperature(next_point, texture_1d)
+
+            for x in range(amount_of_segments - 1):
+                eta = etaFromTemperatures(t1, t2)
+                normal = normalFromPoints(direction, current_point, next_point, texture_1d)
+                direction = refract(direction, normal, eta)
+                path.append([next_point[0], next_point[2]])
+                current_point = next_point
+                next_point = current_point + direction * delta_step / amount_of_segments
+                t1 = sampleTemperature(current_point, texture_1d)
+                t2 = sampleTemperature(next_point, texture_1d)
+
+        else:
+            lastDiffrence =  currentDifference
             path.append([next_point[0], next_point[2]])
             current_point = next_point
-            next_point = current_point + direction * 0.0001
-            lastDiffrence = currentDifference
 
 
     return np.array(path)
@@ -206,9 +249,13 @@ def simulate_superior_mirage():
     start_point = np.array([0.0, 0.0, 0.002])  # Start at origin
     initial_direction = np.array([1.0, 0.0, 0.010])  # Move along +Z direction
 
-    image_path = "fig1.png"  # Replace with the path to your 1D texture (e.g., a red gradient)
+    texture_1d = load_texture("fig1.png")  # Load the wrapped texture based on updated logic
+
+def load_texture(image_path):
     image = Image.open(image_path).convert("RGB")
-    texture_1d = np.array(image)[0, :, 0]  #
+    texture = np.array(image)
+    # Flatten the texture into 1D with wrapping (10 pixels per row)
+    return texture[:, :, 0].flatten()
 
     loops = 10
 
@@ -217,7 +264,7 @@ def simulate_superior_mirage():
     for i in range(loops):
         actual_direction = initial_direction.copy()
         actual_direction[2] -= 0.001 * i
-        delta_step = math.pow(0.5, 1)  # Step size
+        delta_step = math.pow(2, 1)  # Step size
         ray_paths.append(simulate_ray_path(start_point, actual_direction, delta_step,6, texture_1d))
         print(i)
     # Plot the ray path
@@ -256,9 +303,7 @@ def simulate_inferior_mirage():
     start_point = np.array([0.0, 0.0, 0.002])  # Start at origin
     initial_direction = np.array([1.0, 0.0, 0.000])  # Move along +Z direction
 
-    image_path = "fig6.png"  # Replace with the path to your 1D texture (e.g., a red gradient)
-    image = Image.open(image_path).convert("RGB")
-    texture_1d = np.array(image)[0, :, 0]  #
+    texture_1d = load_texture("fig6.png")  # Load the wrapped texture based on updated logic
 
     loops = 10
 
@@ -267,7 +312,7 @@ def simulate_inferior_mirage():
     for i in range(loops):
         actual_direction = initial_direction.copy()
         actual_direction[2] -= 0.0001 * i
-        delta_step = math.pow(0.5, 1)  # Step size
+        delta_step = math.pow(2.0, 1)  # Step size
         ray_paths.append(simulate_ray_path(start_point, actual_direction, delta_step,8, texture_1d))
         print(i)
     # Plot the ray path
@@ -292,5 +337,5 @@ def simulate_inferior_mirage():
 
     # Set the rigid minimum value for Z (y-axis in the diagram)
 
-simulate_superior_mirage()
+#simulate_superior_mirage()
 simulate_inferior_mirage()
