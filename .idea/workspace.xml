@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="134f5974-1361-4d1a-a9e1-340b18b13471" name="Changes" comment="Refactor texture sampling and improve ray simulation logic.&#10;&#10;Revised temperature sampling to handle wrapped 2D textures and adjusted altitude-based indexing. Enhanced ray simulation logic to dynamically segment steps based on temperature differences for better accuracy. Updated texture loading and delta step handling for consistency.">
+    <list default="true" id="134f5974-1361-4d1a-a9e1-340b18b13471" name="Changes" comment="Update README with detailed project description  &#10;&#10;Added a more comprehensive overview of the repository's purpose and included a breakdown of its contents such as key scripts and functionality. This improves clarity for readers and ensures better project documentation.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
@@ -211,7 +211,7 @@
       <workItem from="1740366517561" duration="1932000" />
       <workItem from="1740622104773" duration="631000" />
       <workItem from="1743499439194" duration="550000" />
-      <workItem from="1743506660311" duration="735000" />
+      <workItem from="1743506660311" duration="767000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit">
       <option name="closed" value="true" />
@@ -269,7 +269,15 @@
       <option name="project" value="LOCAL" />
       <updated>1743506766184</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="Update README with detailed project description  &#10;&#10;Added a more comprehensive overview of the repository's purpose and included a breakdown of its contents such as key scripts and functionality. This improves clarity for readers and ensures better project documentation.">
+      <option name="closed" value="true" />
+      <created>1743507414136</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1743507414136</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -291,7 +299,8 @@
     <MESSAGE value="lol" />
     <MESSAGE value="Replace &quot;main.py&quot; with new scripts and update project settings&#10;&#10;`main.py` was removed and replaced with the following new scripts: `heightMapFromOpenElevation.py` and `simplifiedPathTracer.py`. Additionally, project configuration files were updated to align with the new structure and updated Python SDK references." />
     <MESSAGE value="Refactor texture sampling and improve ray simulation logic.&#10;&#10;Revised temperature sampling to handle wrapped 2D textures and adjusted altitude-based indexing. Enhanced ray simulation logic to dynamically segment steps based on temperature differences for better accuracy. Updated texture loading and delta step handling for consistency." />
-    <option name="LAST_COMMIT_MESSAGE" value="Refactor texture sampling and improve ray simulation logic.&#10;&#10;Revised temperature sampling to handle wrapped 2D textures and adjusted altitude-based indexing. Enhanced ray simulation logic to dynamically segment steps based on temperature differences for better accuracy. Updated texture loading and delta step handling for consistency." />
+    <MESSAGE value="Update README with detailed project description  &#10;&#10;Added a more comprehensive overview of the repository's purpose and included a breakdown of its contents such as key scripts and functionality. This improves clarity for readers and ensures better project documentation." />
+    <option name="LAST_COMMIT_MESSAGE" value="Update README with detailed project description  &#10;&#10;Added a more comprehensive overview of the repository's purpose and included a breakdown of its contents such as key scripts and functionality. This improves clarity for readers and ensures better project documentation." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
