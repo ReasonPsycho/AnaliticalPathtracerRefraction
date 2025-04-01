@@ -2,7 +2,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from PIL import Image
-
+from fontTools.misc.textTools import tostr
 
 def lerp(a, b, t):
     return a + (b - a) * t
@@ -58,95 +58,56 @@ def cnoise(x, y, z):
                      lerp(u, grad(p[AB + 1], x, y - 1, z - 1),
                           grad(p[BB + 1], x - 1, y - 1, z - 1))))
 
-def sampleTemperature(p, texture_1d, precision=0.0001, min_temperature_f=-100.0, max_temperature_f=100.0):
-    """
-    Sample temperature based on 1D texture, including normalization logic.
+def clamp(value, min_value, max_value):
+    return max(min_value, min(value, max_value))
 
-    Parameters:
-    - p (numpy array): Point in space [x, y, z].
-    - texture_1d (numpy array): 1D texture array containing the pixel values (R channel).
-    - precision (float): Altitude resolution per pixel (in km).
-    - min_temperature_f (float): Minimum temperature mapped to red value 0.
-    - max_temperature_f (float): Maximum temperature mapped to red value 255.
+def sampleTemperature(p, temperatureP1, temperatureP2):
+    temp1, altitude1 = temperatureP1  # Temperature and altitude of first point
+    temp2, altitude2 = temperatureP2  # Temperature and altitude of second point
+    difference = abs(altitude1 - altitude2)  # Altitude difference (range for blending)
 
-    Returns:
-    - float: Sampled temperature in degrees Fahrenheit.
-    """
-    # Constants
-    texture_width = len(texture_1d) // 100  # Number of pixels per row in the wrapped 2D texture (10 pixels per row)
-    max_height_km = texture_width * 100 * precision  # Total altitude range covered by the 2D texture
+    # Below lower altitude range
+    if p[2] < altitude1:
+        return temp1 + 274.15  # Return temperature in Kelvin
 
-    # Map z-coordinate (height in meters) to texture index
-    z_km = p[2]  # z (meters) converted to kilometers
-    texture_index = z_km / max_height_km * (texture_width * 100)  # Adjust for wrapping logic
+    # Linear interpolation between temp1 and temp2 within range altitude1 to altitude2
+    elif p[2] < altitude2:
+        t = clamp((p[2] - altitude1) / difference, 0.0, 1.0)  # Correctly calculate t for blending
+        return lerp(temp1, temp2, t) + 274.15
 
-    # Handle row and column wrapping logic (wrapped 2D texture)
-    row = int(texture_index // 100) % 100
-    col = int(texture_index % 100)
+    # Blend with ISA model above the upper altitude but within blending range
+    elif p[2] < altitude2 + difference:
+        isa_temperature = 288.15 - (6.5 * p[2])  # Standard ISA temperature model
+        t = clamp((p[2] - altitude2) / difference, 0.0, 1.0)  # Blending ratio
+        return lerp(temp2, isa_temperature, t) + 274.15
 
-    # Retrieve the red value based on wrapping logic
-    red_value = texture_1d[row * 100 + col]  # Red component (0–255)
-
-    # Reverse normalization: Convert red_value (0–255) back to temperature (in Fahrenheit)
-    temperature_f = min_temperature_f + (red_value / 255.0) * (max_temperature_f - min_temperature_f)
-
-    return temperature_f # + cnoise(p[0], p[1], p[2]) * 0.1
-
-def get_temperature_from_texture(texture, altitude_km, max_altitude_km, precision, min_temperature_f,
-                                 max_temperature_f):
-    """
-    Get the temperature at a specific altitude from a generated 1D temperature texture.
-
-    Parameters:
-    - texture (PIL.Image.Image): The generated texture.
-    - altitude_km (float): The altitude in kilometers for which to get the temperature.
-    - max_altitude_km (float): The maximum altitude covered by the texture (in km).
-    - precision (float): The altitude range per pixel in kilometers.
-    - min_temperature_f (float): The minimum temperature value mapped to 0 in the texture.
-    - max_temperature_f (float): The maximum temperature value mapped to 255 in the texture.
-
-    Returns:
-    - temperature (float): The temperature at the given altitude (in Fahrenheit).
-    """
-    # Convert the texture into a NumPy array
-    texture_np = np.array(texture)
-
-    # Calculate the total number of pixels in the 1D data
-    texture_width = texture_np.shape[1]
-    texture_height = texture_np.shape[0]
-    total_pixels = texture_width * (texture_height // 100)
-
-    # Calculate the corresponding pixel index for the given altitude
-    pixel_index = min(int(altitude_km / precision), total_pixels - 1)
-
-    # Determine the row and column in the texture where the pixel would be
-    row = pixel_index // texture_width
-    col = pixel_index % texture_width
-
-    # Get the red channel value at the calculated position (which holds the temperature encoding)
-    red_value = texture_np[row * 100, col, 0]
-
-    # Map the normalized value back to the temperature range
-    temperature = (red_value / 255) * (max_temperature_f - min_temperature_f) + min_temperature_f
-
-    return temperature
+    # Fully outside range, use ISA model
+    return 288.15 - (6.5 * p[2])
 
 def refract(incident_vec, normal, eta):
     """
     Computes the refracted vector based on an incident vector, surface normal, and eta (n1 / n2).
 
     Parameters:
-    - out (numpy array): Output vector to populate the refracted result.
     - incident_vec (numpy array): Incident vector (3D).
     - normal (numpy array): Normal vector (3D).
     - eta (float): Ratio of refractive indices.
 
     Returns:
-    - None: Updates the out array in place.
+    - numpy array: Refracted vector (3D), or a zero vector in case of total internal reflection
+      or invalid inputs (e.g., zero vectors).
     """
-    # Ensure vectors are normalized
-    incident_vec = incident_vec / np.linalg.norm(incident_vec)
-    normal = normal / np.linalg.norm(normal)
+    # Avoid division by zero by checking norm before normalization
+    incident_norm = np.linalg.norm(incident_vec)
+    normal_norm = np.linalg.norm(normal)
+
+    if incident_norm == 0 or normal_norm == 0:
+        # Invalid input, return zero vector
+        return np.array([0.0, 0.0, 0.0])
+
+    # Normalize vectors
+    incident_vec = incident_vec / incident_norm
+    normal = normal / normal_norm
 
     # Dot product between normal and incident_vec
     n_dot_i = np.dot(normal, incident_vec)
@@ -154,7 +115,7 @@ def refract(incident_vec, normal, eta):
     # Snell's Law calculations
     k = 1.0 - eta ** 2 * (1.0 - n_dot_i ** 2)
     if k < 0.0:
-        # Total internal reflection - set out to zero vector
+        # Total internal reflection - return zero vector
         return np.array([0.0, 0.0, 0.0])
     else:
         # Refracted vector calculation
@@ -164,92 +125,111 @@ def etaFromTemperatures(t1, t2):
     """Calculate the refractive index ratio based on temperatures."""
     return 1 + 0.000292 * t1 / t2
 
-def normalFromPoints(direction, p1, p2,texture_1d):
+def normalFromPoints(direction, p1, p2,temperatureP1,temperatureP2):
     """Calculate the normal vector at a point based on temperature gradient."""
-    delta = 0.0001  # Small step for finite difference
+    delta = 0.00001  # Small step for finite difference
     # Gradient in the x direction
-    t1x = etaFromTemperatures(sampleTemperature(p1,texture_1d), sampleTemperature(p2,texture_1d))
-    t2x = etaFromTemperatures(sampleTemperature(p1,texture_1d), sampleTemperature(p2 + np.array([delta, 0, 0]),texture_1d))
+    t1x = etaFromTemperatures(sampleTemperature(p1, temperatureP1, temperatureP2), sampleTemperature(p2, temperatureP1, temperatureP2))
+    t2x = etaFromTemperatures(sampleTemperature(p1, temperatureP1, temperatureP2),
+                              sampleTemperature(p2 + np.array([delta, 0, 0]), temperatureP1, temperatureP2))
     gradient_x = (t2x - t1x) / delta
 
     # Gradient in the y direction
-    t1y = etaFromTemperatures(sampleTemperature(p1,texture_1d), sampleTemperature(p2,texture_1d))
-    t2y = etaFromTemperatures(sampleTemperature(p1,texture_1d), sampleTemperature(p2 + np.array([0, delta, 0]),texture_1d))
+    t1y = etaFromTemperatures(sampleTemperature(p1, temperatureP1, temperatureP2), sampleTemperature(p2, temperatureP1, temperatureP2))
+    t2y = etaFromTemperatures(sampleTemperature(p1, temperatureP1, temperatureP2),
+                              sampleTemperature(p2 + np.array([0, delta, 0]), temperatureP1, temperatureP2))
     gradient_y = (t2y - t1y) / delta
 
-    t1z = etaFromTemperatures(sampleTemperature(p1,texture_1d), sampleTemperature(p2,texture_1d))
-    t2z = etaFromTemperatures(sampleTemperature(p1,texture_1d), sampleTemperature(p2 + np.array([0, 0, delta]),texture_1d))
+    t1z = etaFromTemperatures(sampleTemperature(p1, temperatureP1, temperatureP2), sampleTemperature(p2, temperatureP1, temperatureP2))
+    t2z = etaFromTemperatures(sampleTemperature(p1, temperatureP1, temperatureP2),
+                              sampleTemperature(p2 + np.array([0, 0, delta]), temperatureP1, temperatureP2))
     gradient_z = (t2z - t1z) / delta
 
+    normalMultiplayer = (math.fabs(p1[0] - p2[0]) + math.fabs(p1[1] - p2[1]) + math.fabs(p1[2] - p2[2])) * 1000
+
     epsilon = 1e-8  # Small value to avoid division by zero
-    gradient = np.array([-direction[0] + gradient_x, -direction[1] + gradient_y, -direction[2] + gradient_z])
+    gradient = np.array([-direction[0] + gradient_x * normalMultiplayer, -direction[1] + gradient_y* normalMultiplayer, -direction[2] + gradient_z* normalMultiplayer])
     gradient_norm = np.linalg.norm(gradient) + epsilon
     return gradient / gradient_norm
 
-def simulate_ray_path(start_point, initial_direction, delta_step,maxX,texture_1d):
+def rk4_step(position, direction, delta_t, temperatureP1,temperatureP2):
     """
-    Simulate the ray path across a varying temperature field.
+    Perform a single RK4 step for the ray position and direction using the refractive field.
 
     Parameters:
-    - start_point (numpy array): Initial 3D position of the ray
-    - initial_direction (numpy array): Initial 3D direction of the ray (normalized)
-    - steps (int): Number of steps to simulate
-    - delta_step (float): Step size for ray traversal
+    - position (numpy array): Current position vector (x, y, z).
+    - direction (numpy array): Current direction vector (dx, dy, dz).
+    - delta_t (float): Time step for RK4.
+    - texture_1d (numpy array): Temperature field, used for refractive index gradients.
 
     Returns:
-    - numpy array: Array of ray positions
+    - new_position (numpy array): Updated position vector after delta_t.
+    - new_direction (numpy array): Updated direction vector after delta_t.
+    """
+
+    def compute_derivatives(pos, dir):
+        """
+        Compute position and direction derivatives for RK4.
+        - dP/dt = dir (current direction)
+        - dD/dt = gradient of refractive index affecting the direction
+        """
+        # Position derivative is simply the direction
+        position_derivative = dir
+
+        # Compute the refractive gradient and find the effect on the direction
+        next_point = pos + dir * delta_t
+        temp1 = sampleTemperature(pos, temperatureP1, temperatureP2)
+        temp2 = sampleTemperature(next_point, temperatureP1, temperatureP2)
+        eta = etaFromTemperatures(temp1, temp2)
+
+        # Compute the normal from refractive gradients
+        normal = normalFromPoints(dir, pos, next_point,temperatureP1,temperatureP2)
+
+        # Compute refracted direction
+        direction_derivative = refract(dir, normal, eta) - dir  # Change in direction
+
+        return position_derivative, direction_derivative
+
+    # RK4 integration steps
+    k1_pos, k1_dir = compute_derivatives(position, direction)
+    k2_pos, k2_dir = compute_derivatives(
+        position + 0.5 * delta_t * k1_pos,
+        direction + 0.5 * delta_t * k1_dir
+    )
+    k3_pos, k3_dir = compute_derivatives(
+        position + 0.5 * delta_t * k2_pos,
+        direction + 0.5 * delta_t * k2_dir
+    )
+    k4_pos, k4_dir = compute_derivatives(
+        position + delta_t * k3_pos,
+        direction + delta_t * k3_dir
+    )
+
+    # Combine weighted derivatives to compute the change over delta_t
+    new_position = position + (delta_t / 6.0) * (k1_pos + 2 * k2_pos + 2 * k3_pos + k4_pos)
+    new_direction = direction + (delta_t / 6.0) * (k1_dir + 2 * k2_dir + 2 * k3_dir + k4_dir)
+
+    return new_position, new_direction
+
+def simulate_ray_path(start_point, initial_direction, delta_step, maxX, temperatureP1,temperatureP2):
+    """
+    Simulate the ray path using RK4 integration for accurate refraction calculations.
     """
     path = [[start_point[0], start_point[2]]]
+    position = start_point
+    if(initial_direction[2] == 0):
+        return  np.array(path)
+
     direction = initial_direction / np.linalg.norm(initial_direction)
-    current_point = start_point
-    lastDiffrence = 0
 
-    while (math.fabs(current_point[0]) <= maxX and current_point[2]  > 0 ):
-        next_point = current_point + direction * delta_step
+    while math.fabs(position[0]) <= maxX and position[2] > 0 and len(path) < 20:
+        # Perform a single RK4 step
+        position, direction = rk4_step(position, direction, delta_step, temperatureP1,temperatureP2)
 
-        t1 = sampleTemperature(current_point,texture_1d)
-        t2 = sampleTemperature(next_point,texture_1d)
-        currentDifference = math.fabs(t2 - t1) + lastDiffrence
-
-
-        if (currentDifference > 0.5):
-            amount_of_segments = int(currentDifference // 0.8 + 1)
-            next_point = current_point + direction * delta_step / amount_of_segments
-            t1 = sampleTemperature(current_point, texture_1d)
-            t2 = sampleTemperature(next_point, texture_1d)
-
-            for x in range(amount_of_segments - 1):
-                eta = etaFromTemperatures(t1, t2)
-                normal = normalFromPoints(direction, current_point, next_point, texture_1d)
-                direction = refract(direction, normal, eta)
-                path.append([next_point[0], next_point[2]])
-                current_point = next_point
-                next_point = current_point + direction * delta_step / amount_of_segments
-                t1 = sampleTemperature(current_point, texture_1d)
-                t2 = sampleTemperature(next_point, texture_1d)
-
-        else:
-            lastDiffrence =  currentDifference
-            path.append([next_point[0], next_point[2]])
-            current_point = next_point
-
+        # Store the path (projecting to X-Z plane for simplicity)
+        path.append([position[0], position[2]])
 
     return np.array(path)
-
-def simulate_superior_mirage():
-    """
-    Fig. 1 is an example of a mirage of this kind: the
-    water temperature was between 12 and 14 ºC, that
-    of the air between 27 and 30 ºC, the distance to the
-    object was 6 km and the camera was 2 m high over
-    the sea surface. It was taken in a calm summer day.
-    """
-
-    # Initial parameters
-    start_point = np.array([0.0, 0.0, 0.002])  # Start at origin
-    initial_direction = np.array([1.0, 0.0, 0.010])  # Move along +Z direction
-
-    texture_1d = load_texture("fig1.png")  # Load the wrapped texture based on updated logic
 
 def load_texture(image_path):
     image = Image.open(image_path).convert("RGB")
@@ -257,40 +237,20 @@ def load_texture(image_path):
     # Flatten the texture into 1D with wrapping (10 pixels per row)
     return texture[:, :, 0].flatten()
 
-    loops = 10
+def calculate_initial_direction(min_direction,max_direction,current_loop,max_loops):
+    return lerp(min_direction,max_direction,current_loop/max_loops)
 
-    # Simulate the ray path
-    ray_paths = []
-    for i in range(loops):
-        actual_direction = initial_direction.copy()
-        actual_direction[2] -= 0.001 * i
-        delta_step = math.pow(2, 1)  # Step size
-        ray_paths.append(simulate_ray_path(start_point, actual_direction, delta_step,6, texture_1d))
-        print(i)
-    # Plot the ray path
+loops = 100
+ymin = 0.0  # Replace 0.0 with your desired minimum value
+ymax = 0.01  # Replace 0.0 with your desired minimum value
+xmin = 0.0  # Replace 0.0 with your desired minimum value
+xmax = 8  # Replace 0.0 with your desired minimum value
+start_point = np.array([0.0, 0.0, 0.002])  # Start at origin
+min_direction = np.array([1.0, 0.0, -0.002])  # Start at origin
+max_direction = np.array([1.0, 0.0, 0.002])  # Start at origin
+delta_step = math.pow(2, 1)  # Step size
 
-    fig = plt.figure(figsize=(8, 6))
-    ax = fig.add_subplot(111)
-
-    for i in range(loops):
-        actual_direction = initial_direction.copy()
-        actual_direction[2] -= 0.0001 * i
-        ax.plot(ray_paths[i][:, 0], ray_paths[i][:, 1], label='Direction: ' +f"{actual_direction[2]:.5f}", marker='o')
-
-    ax.set_xlabel('X (km)')
-    ax.set_ylabel('Z (km)')
-    ax.set_title('Simulated Ray Path of Superior Mirage')
-    ax.legend()
-
-    ymin = 0.0  # Replace 0.0 with your desired minimum value
-    ymax = 0.2  # Replace 0.0 with your desired minimum value
-    ax.set_ylim(ymin, None)  # Set minimum Z value and leave maximum value as default (none)
-
-    plt.show()
-
-    # Set the rigid minimum value for Z (y-axis in the diagram)
-
-def simulate_inferior_mirage():
+def simulate_superior_mirage(temperatureP1,temperatureP2):
     """
     Fig. 1 is an example of a mirage of this kind: the
     water temperature was between 12 and 14 ºC, that
@@ -300,20 +260,14 @@ def simulate_inferior_mirage():
     """
 
     # Initial parameters
-    start_point = np.array([0.0, 0.0, 0.002])  # Start at origin
-    initial_direction = np.array([1.0, 0.0, 0.000])  # Move along +Z direction
 
-    texture_1d = load_texture("fig6.png")  # Load the wrapped texture based on updated logic
+    texture_1d = load_texture("fig1.png")  # Load the wrapped texture based on updated logic
 
-    loops = 10
 
     # Simulate the ray path
     ray_paths = []
     for i in range(loops):
-        actual_direction = initial_direction.copy()
-        actual_direction[2] -= 0.0001 * i
-        delta_step = math.pow(2.0, 1)  # Step size
-        ray_paths.append(simulate_ray_path(start_point, actual_direction, delta_step,8, texture_1d))
+        ray_paths.append(simulate_ray_path(start_point, calculate_initial_direction(min_direction,max_direction,i,loops), delta_step, 6, temperatureP1,temperatureP2))
         print(i)
     # Plot the ray path
 
@@ -321,21 +275,57 @@ def simulate_inferior_mirage():
     ax = fig.add_subplot(111)
 
     for i in range(loops):
-        actual_direction = initial_direction.copy()
-        actual_direction[2] -= 0.0001 * i
-        ax.plot(ray_paths[i][:, 0], ray_paths[i][:, 1], label='Direction: ' +f"{actual_direction[2]:.5f}", marker='o')
+        ax.plot(ray_paths[i][:, 0], ray_paths[i][:, 1], label='Direction: ' + f"{calculate_initial_direction(min_direction,max_direction,i,loops)[2]:.5f}", marker='o')
+
     ax.set_xlabel('X (km)')
     ax.set_ylabel('Z (km)')
-    ax.set_title('Simulated Ray Path of Inferior Mirage')
-    ax.legend()
+    ax.set_title('Symulowane ścieżki promieni mirażu górnego')
+    #ax.legend()
 
-    ymin = 0.0  # Replace 0.0 with your desired minimum value
-    ymax = 0.2  # Replace 0.0 with your desired minimum value
-    ax.set_ylim(ymin, None)  # Set minimum Z value and leave maximum value as default (none)
+
+    ax.set_ylim(ymin, ymax)  # Set minimum Z value and leave maximum value as default (none)
+    ax.set_xlim(xmin, 6)  # Set minimum Z value and leave maximum value as default (none)
+
+    plt.show()
+
+
+    # Set the rigid minimum value for Z (y-axis in the diagram)
+
+def simulate_inferior_mirage(temperatureP1,temperatureP2):
+    """
+    Fig. 1 is an example of a mirage of this kind: the
+    water temperature was between 12 and 14 ºC, that
+    of the air between 27 and 30 ºC, the distance to the
+    object was 6 km and the camera was 2 m high over
+    the sea surface. It was taken in a calm summer day.
+    """
+
+    texture_1d = load_texture("fig6.png")  # Load the wrapped texture based on updated logic
+    # Simulate the ray path
+    ray_paths = []
+    for i in range(loops):
+        ray_paths.append(simulate_ray_path(start_point, calculate_initial_direction(min_direction,max_direction,i,loops), delta_step,8, temperatureP1,temperatureP2))
+        print(i)
+    # Plot the ray path
+
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111)
+
+    for i in range(loops):
+
+        ax.plot(ray_paths[i][:, 0], ray_paths[i][:, 1], label='Direction: ' +f"{calculate_initial_direction(min_direction,max_direction,i,loops)[2]:.5f}", marker='o')
+    ax.set_xlabel('X (km)')
+    ax.set_ylabel('Z (km)')
+    ax.set_title('Symulowane ścieżki promieni mirażu dolnego')
+    #ax.legend()
+
+    ax.set_ylim(ymin, ymax)  # Set minimum Z value and leave maximum value as default (none)
+    ax.set_xlim(xmin, xmax)  # Set minimum Z value and leave maximum value as default (none)
 
     plt.show()
 
     # Set the rigid minimum value for Z (y-axis in the diagram)
 
-#simulate_superior_mirage()
-simulate_inferior_mirage()
+simulate_superior_mirage((13,0),(29,0.04))
+simulate_inferior_mirage((10,0),(6,0.04))
+

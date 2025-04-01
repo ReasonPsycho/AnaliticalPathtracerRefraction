@@ -44,7 +44,7 @@ def fetch_satellite_image(lat1, lng1, lat2, lng2, api_key, image_size=1024):
 # Configuration
 LAT1, LNG1 = 42.638618, -8.835686  # First corner latitude and longitude
 LAT2, LNG2 = 42.586189, -8.768223  # Second corner latitude and longitude
-API_KEY = "da-Y"  # Replace with your Google API key
+API_KEY = "TOKEN_HERE"  # Replace with your Google API key
 OUTPUT_FILE = "satellite_image.png"  # Output file to save the image
 
 # Fetch and save the satellite image

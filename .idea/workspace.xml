@@ -4,15 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="134f5974-1361-4d1a-a9e1-340b18b13471" name="Changes" comment="lol">
-      <change afterPath="$PROJECT_DIR$/heightMapFromOpenElevation.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/sateliteImigeFromHeightMap.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simplifiedPathTracer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/temperatureToTexture.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/PythonProject.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/PythonProject.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="134f5974-1361-4d1a-a9e1-340b18b13471" name="Changes" comment="Refactor texture sampling and improve ray simulation logic.&#10;&#10;Revised temperature sampling to handle wrapped 2D textures and adjusted altitude-based indexing. Enhanced ray simulation logic to dynamically segment steps based on temperature differences for better accuracy. Updated texture loading and delta step handling for consistency.">
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/heightMapFromOpenElevation.py" beforeDir="false" afterPath="$PROJECT_DIR$/heightMapFromOpenElevation.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sateliteImigeFromHeightMap.py" beforeDir="false" afterPath="$PROJECT_DIR$/sateliteImigeFromHeightMap.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simplifiedPathTracer.py" beforeDir="false" afterPath="$PROJECT_DIR$/simplifiedPathTracer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/temperatureToTexture.py" beforeDir="false" afterPath="$PROJECT_DIR$/temperatureToTexture.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,26 +48,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.heightMapFromOpenElevation.executor": "Run",
-    "Python.main.executor": "Run",
-    "Python.sateliteImigeFromHeightMap.executor": "Run",
-    "Python.simplifiedPathTracer.executor": "Run",
-    "Python.temperatureToTexture.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "master",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "ml.llm.LLMConfigurable",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.heightMapFromOpenElevation.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.sateliteImigeFromHeightMap.executor&quot;: &quot;Run&quot;,
+    &quot;Python.simplifiedPathTracer (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.simplifiedPathTracer.executor&quot;: &quot;Run&quot;,
+    &quot;Python.temperatureToTexture.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/redkc/PycharmProjects/AnaliticalPathtracerRefraction&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;debugger.dataViews.python.type.renderers&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
-  <component name="RunManager" selected="Python.heightMapFromOpenElevation">
+}</component>
+  <component name="RunManager" selected="Python.simplifiedPathTracer">
     <configuration name="heightMapFromOpenElevation" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PythonProject" />
       <option name="ENV_FILES" value="" />
@@ -164,9 +164,9 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.temperatureToTexture" />
         <item itemvalue="Python.heightMapFromOpenElevation" />
         <item itemvalue="Python.sateliteImigeFromHeightMap" />
-        <item itemvalue="Python.temperatureToTexture" />
       </list>
     </recent_temporary>
   </component>
@@ -190,7 +190,32 @@
       <workItem from="1737017591821" duration="11350000" />
       <workItem from="1737123166206" duration="6179000" />
       <workItem from="1737198410239" duration="12000" />
-      <workItem from="1737295788203" duration="19654000" />
+      <workItem from="1737295788203" duration="29188000" />
+      <workItem from="1737362184213" duration="4123000" />
+      <workItem from="1737370516696" duration="1538000" />
+      <workItem from="1737947578976" duration="457000" />
+      <workItem from="1737964115574" duration="776000" />
+      <workItem from="1737987725038" duration="1543000" />
+      <workItem from="1738070719539" duration="5976000" />
+      <workItem from="1738079741912" duration="12159000" />
+      <workItem from="1738157131352" duration="21579000" />
+      <workItem from="1739023944532" duration="3512000" />
+      <workItem from="1739036292386" duration="3698000" />
+      <workItem from="1739041677249" duration="11509000" />
+      <workItem from="1739099161688" duration="4686000" />
+      <workItem from="1739108217487" duration="3646000" />
+      <workItem from="1739131966557" duration="1247000" />
+      <workItem from="1739133903175" duration="5866000" />
+      <workItem from="1739144994981" duration="5666000" />
+      <workItem from="1739178714178" duration="996000" />
+      <workItem from="1739232374717" duration="2072000" />
+      <workItem from="1739314300129" duration="5187000" />
+      <workItem from="1739393118739" duration="12906000" />
+      <workItem from="1739835251721" duration="2526000" />
+      <workItem from="1740366517561" duration="1932000" />
+      <workItem from="1740622104773" duration="631000" />
+      <workItem from="1743499439194" duration="550000" />
+      <workItem from="1743506660311" duration="62000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit">
       <option name="closed" value="true" />
@@ -224,7 +249,23 @@
       <option name="project" value="LOCAL" />
       <updated>1736949050677</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="Replace &quot;main.py&quot; with new scripts and update project settings&#10;&#10;`main.py` was removed and replaced with the following new scripts: `heightMapFromOpenElevation.py` and `simplifiedPathTracer.py`. Additionally, project configuration files were updated to align with the new structure and updated Python SDK references.">
+      <option name="closed" value="true" />
+      <created>1737325719968</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1737325719968</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Refactor texture sampling and improve ray simulation logic.&#10;&#10;Revised temperature sampling to handle wrapped 2D textures and adjusted altitude-based indexing. Enhanced ray simulation logic to dynamically segment steps based on temperature differences for better accuracy. Updated texture loading and delta step handling for consistency.">
+      <option name="closed" value="true" />
+      <created>1738161478226</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1738161478226</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -244,44 +285,58 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial commit" />
     <MESSAGE value="lol" />
-    <option name="LAST_COMMIT_MESSAGE" value="lol" />
+    <MESSAGE value="Replace &quot;main.py&quot; with new scripts and update project settings&#10;&#10;`main.py` was removed and replaced with the following new scripts: `heightMapFromOpenElevation.py` and `simplifiedPathTracer.py`. Additionally, project configuration files were updated to align with the new structure and updated Python SDK references." />
+    <MESSAGE value="Refactor texture sampling and improve ray simulation logic.&#10;&#10;Revised temperature sampling to handle wrapped 2D textures and adjusted altitude-based indexing. Enhanced ray simulation logic to dynamically segment steps based on temperature differences for better accuracy. Updated texture loading and delta step handling for consistency." />
+    <option name="LAST_COMMIT_MESSAGE" value="Refactor texture sampling and improve ray simulation logic.&#10;&#10;Revised temperature sampling to handle wrapped 2D textures and adjusted altitude-based indexing. Enhanced ray simulation logic to dynamically segment steps based on temperature differences for better accuracy. Updated texture loading and delta step handling for consistency." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/simplifiedPathTracer.py</url>
-          <line>167</line>
-          <option name="timeStamp" value="22" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/simplifiedPathTracer.py</url>
-          <line>128</line>
-          <option name="timeStamp" value="23" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/temperatureToTexture.py</url>
-          <line>21</line>
-          <option name="timeStamp" value="26" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/simplifiedPathTracer.py</url>
-          <line>148</line>
-          <option name="timeStamp" value="29" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/heightMapFromOpenElevation.py</url>
           <line>7</line>
           <option name="timeStamp" value="33" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/simplifiedPathTracer.py</url>
+          <line>117</line>
+          <option name="timeStamp" value="37" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/temperatureToTexture.py</url>
+          <line>47</line>
+          <option name="timeStamp" value="67" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/simplifiedPathTracer.py</url>
+          <line>317</line>
+          <option name="timeStamp" value="76" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/simplifiedPathTracer.py</url>
+          <line>97</line>
+          <option name="timeStamp" value="82" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/simplifiedPathTracer.py</url>
+          <line>103</line>
+          <option name="timeStamp" value="86" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/simplifiedPathTracer.py</url>
+          <line>112</line>
+          <option name="timeStamp" value="87" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/AnaliticalPathtracerRefraction$heightMapFromOpenElevation.coverage" NAME="heightMapFromOpenElevation Coverage Results" MODIFIED="1737325343412" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/AnaliticalPathtracerRefraction$simplifiedPathTracer__1_.coverage" NAME="simplifiedPathTracer (1) Coverage Results" MODIFIED="1739039337758" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/AnaliticalPathtracerRefraction$heightMapFromOpenElevation.coverage" NAME="heightMapFromOpenElevation Coverage Results" MODIFIED="1739138368173" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/AnaliticalPathtracerRefraction$sateliteImigeFromHeightMap.coverage" NAME="sateliteImigeFromHeightMap Coverage Results" MODIFIED="1737321005470" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/AnaliticalPathtracerRefraction$main.coverage" NAME="simplifiedPathTracer Coverage Results" MODIFIED="1737317908196" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/AnaliticalPathtracerRefraction$temperatureToTexture.coverage" NAME="temperatureToTexture Coverage Results" MODIFIED="1737317507686" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/AnaliticalPathtracerRefraction$temperatureToTexture.coverage" NAME="temperatureToTexture Coverage Results" MODIFIED="1739138715197" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/PythonProject$main.coverage" NAME="main Coverage Results" MODIFIED="1737036699796" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/AnaliticalPathtracerRefraction$simplifiedPathTracer.coverage" NAME="simplifiedPathTracer Coverage Results" MODIFIED="1740366612335" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

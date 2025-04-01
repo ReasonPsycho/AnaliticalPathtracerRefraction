@@ -69,7 +69,7 @@ GRID_SIZE = 400  # 20x20 grid
 IMAGE_SIZE = 1024  # Output image size (1024x1024 pixels)
 OUTPUT_FILE = "height_map.png"  # Output file name
 USE_GOOGLE = True  # Use Google Maps API (True) or Open Elevation API (False)
-API_KEY = "da-Y" if USE_GOOGLE else None
+API_KEY = "TOKEN_HERE" if USE_GOOGLE else None
 
 # Generate and save the height map
 height_map = generate_height_map(LAT1, LNG1, LAT2, LNG2, GRID_SIZE, API_KEY, USE_GOOGLE)
