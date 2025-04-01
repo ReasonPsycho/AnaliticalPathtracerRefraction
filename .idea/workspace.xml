@@ -5,12 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="134f5974-1361-4d1a-a9e1-340b18b13471" name="Changes" comment="Refactor texture sampling and improve ray simulation logic.&#10;&#10;Revised temperature sampling to handle wrapped 2D textures and adjusted altitude-based indexing. Enhanced ray simulation logic to dynamically segment steps based on temperature differences for better accuracy. Updated texture loading and delta step handling for consistency.">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/heightMapFromOpenElevation.py" beforeDir="false" afterPath="$PROJECT_DIR$/heightMapFromOpenElevation.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sateliteImigeFromHeightMap.py" beforeDir="false" afterPath="$PROJECT_DIR$/sateliteImigeFromHeightMap.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simplifiedPathTracer.py" beforeDir="false" afterPath="$PROJECT_DIR$/simplifiedPathTracer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/temperatureToTexture.py" beforeDir="false" afterPath="$PROJECT_DIR$/temperatureToTexture.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -215,7 +211,7 @@
       <workItem from="1740366517561" duration="1932000" />
       <workItem from="1740622104773" duration="631000" />
       <workItem from="1743499439194" duration="550000" />
-      <workItem from="1743506660311" duration="62000" />
+      <workItem from="1743506660311" duration="735000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit">
       <option name="closed" value="true" />
@@ -265,7 +261,15 @@
       <option name="project" value="LOCAL" />
       <updated>1738161478226</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="Refactor texture sampling and improve ray simulation logic.&#10;&#10;Revised temperature sampling to handle wrapped 2D textures and adjusted altitude-based indexing. Enhanced ray simulation logic to dynamically segment steps based on temperature differences for better accuracy. Updated texture loading and delta step handling for consistency.">
+      <option name="closed" value="true" />
+      <created>1743506766184</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1743506766184</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
